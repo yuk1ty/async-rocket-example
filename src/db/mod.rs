@@ -1,2 +1,7 @@
+use rocket_db_pools::{sqlx, Database};
+
 pub mod models;
-pub mod schema;
+
+#[derive(Database)]
+#[database("app")]
+pub struct DB(sqlx::PgPool);

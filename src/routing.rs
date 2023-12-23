@@ -1,6 +1,11 @@
-use rocket::{get, http::Status, serde::json::Json};
+use rocket::{get, http::Status, post, serde::json::Json};
+use rocket_db_pools::Connection;
+use uuid::Uuid;
 
-use crate::models::{TodoListResponse, TodoResponse};
+use crate::{
+    db::DB,
+    models::{CreateOrModifyTodoRequest, TodoListResponse, TodoResponse},
+};
 
 #[get("/")]
 pub fn health_check() -> Status {
@@ -13,21 +18,21 @@ pub fn todo_list(limit: Option<usize>, done: Option<bool>) -> Json<TodoListRespo
     // This will be replaced with database accessing steps in the next part.
     let source = vec![
         TodoResponse {
-            id: 1,
+            id: Uuid::new_v4(),
             title: "First todo".to_string(),
-            description: "This is the first todo".to_string(),
+            description: Some("This is the first todo".to_string()),
             done: false,
         },
         TodoResponse {
-            id: 2,
+            id: Uuid::new_v4(),
             title: "Second todo".to_string(),
-            description: "This is the second todo".to_string(),
+            description: Some("This is the second todo".to_string()),
             done: false,
         },
         TodoResponse {
-            id: 3,
+            id: Uuid::new_v4(),
             title: "Third todo".to_string(),
-            description: "This is the third todo".to_string(),
+            description: Some("This is the third todo".to_string()),
             done: false,
         },
     ];
@@ -48,4 +53,33 @@ pub fn todo_list(limit: Option<usize>, done: Option<bool>) -> Json<TodoListRespo
         .collect::<Vec<_>>();
 
     Json(TodoListResponse { items: filtered })
+}
+
+#[post("/", format = "json", data = "<todo>")]
+pub async fn create_todo(
+    todo: Json<CreateOrModifyTodoRequest>,
+    mut db: Connection<DB>,
+) -> (Status, Option<Json<TodoResponse>>) {
+    let res = sqlx::query!(
+        r#"
+        INSERT INTO todos (title, description, done)
+        VALUES ($1, $2, false)
+        RETURNING id, title, description, done
+        "#,
+        todo.title,
+        todo.description
+    )
+    .fetch_one(&mut **db)
+    .await
+    .map(|r| TodoResponse {
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        done: r.done,
+    })
+    .ok();
+    match res {
+        Some(todo) => (Status::Created, Some(Json(todo))),
+        None => (Status::InternalServerError, None),
+    }
 }
