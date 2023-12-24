@@ -15,4 +15,5 @@ sqlx = { version = "0.7.3", features = [
   "macros",
   "uuid",
 ], default-features = false }
+thiserror = "1.0.51"
 validator = { version = "0.16.1", features = ["derive"] }

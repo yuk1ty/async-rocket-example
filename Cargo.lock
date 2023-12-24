@@ -75,6 +75,7 @@ dependencies = [
  "rocket",
  "rocket_db_pools",
  "sqlx",
+ "thiserror",
  "uuid",
  "validator",
 ]
