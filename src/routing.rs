@@ -1,4 +1,4 @@
-use rocket::{get, http::Status, post, serde::json::Json};
+use rocket::{get, http::Status, post, serde::json::Json, response::status::Created};
 use rocket_db_pools::Connection;
 use uuid::Uuid;
 
@@ -59,7 +59,7 @@ pub fn todo_list(limit: Option<usize>, done: Option<bool>) -> Json<TodoListRespo
 pub async fn create_todo(
     todo: Json<CreateOrModifyTodoRequest>,
     mut db: Connection<DB>,
-) -> (Status, Option<Json<TodoResponse>>) {
+) -> crate::errors::Result<Created<Json<TodoResponse>>> {
     let res = sqlx::query!(
         r#"
         INSERT INTO todos (title, description, done)
@@ -76,10 +76,6 @@ pub async fn create_todo(
         title: r.title,
         description: r.description,
         done: r.done,
-    })
-    .ok();
-    match res {
-        Some(todo) => (Status::Created, Some(Json(todo))),
-        None => (Status::InternalServerError, None),
-    }
+    }).map_err(anyhow::Error::new)?;
+    Ok(Created::new("/").body(Json(res)))
 }
