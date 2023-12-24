@@ -1,6 +1,8 @@
 use chrono::NaiveDateTime;
+use sqlx::FromRow;
 use uuid::Uuid;
 
+#[derive(FromRow)]
 pub struct TodoRow {
     pub id: Uuid,
     pub title: String,

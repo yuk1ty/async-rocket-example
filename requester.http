@@ -1,0 +1,17 @@
+###
+
+GET http://127.0.0.1:8000/todos
+
+###
+
+GET http://127.0.0.1:8000/todos?limit=10&done=false
+
+###
+
+POST http://127.0.0.1:8000/todos
+Content-Type: application/json
+
+{
+  "title": "implement todo list",
+  "description": "need to implement todo list app"
+}

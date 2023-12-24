@@ -1,10 +1,9 @@
 use rocket::{get, http::Status, post, response::status::Created, serde::json::Json};
 use rocket_db_pools::Connection;
-use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    db::DB,
+    db::{models::TodoRow, DB},
     errors::Errors,
     models::{CreateOrModifyTodoRequest, TodoListResponse, TodoResponse},
 };
@@ -15,46 +14,54 @@ pub fn health_check() -> Status {
 }
 
 #[get("/?<limit>&<done>")]
-pub fn todo_list(limit: Option<usize>, done: Option<bool>) -> Json<TodoListResponse> {
-    // A dummy data to represent fetching values from database.
-    // This will be replaced with database accessing steps in the next part.
-    let source = vec![
-        TodoResponse {
-            id: Uuid::new_v4(),
-            title: "First todo".to_string(),
-            description: Some("This is the first todo".to_string()),
-            done: false,
-        },
-        TodoResponse {
-            id: Uuid::new_v4(),
-            title: "Second todo".to_string(),
-            description: Some("This is the second todo".to_string()),
-            done: false,
-        },
-        TodoResponse {
-            id: Uuid::new_v4(),
-            title: "Third todo".to_string(),
-            description: Some("This is the third todo".to_string()),
-            done: false,
-        },
-    ];
-    // Here should be done within database.
-    let filtered = source[..limit.unwrap_or(source.len())]
+pub async fn todo_list(
+    limit: Option<usize>,
+    done: Option<bool>,
+    mut db: Connection<DB>,
+) -> crate::errors::Result<Json<TodoListResponse>> {
+    let filtered: Vec<TodoRow> = match (limit, done) {
+        (Some(limit), Some(done)) => sqlx::query_as!(
+                TodoRow,
+                "SELECT id, title, description, done, creation_date, modified_date FROM todos WHERE done = $1 LIMIT $2",
+                done,
+                limit as i64
+            )
+            .fetch_all(&mut **db)
+            .await
+            .map_err(Errors::SqlxError)?,
+        (Some(limit), None) => sqlx::query_as!(
+                TodoRow,
+                "SELECT id, title, description, done, creation_date, modified_date FROM todos LIMIT $1",
+                limit as i64
+            )
+            .fetch_all(&mut **db)
+            .await
+            .map_err(Errors::SqlxError)?,
+        (None, Some(done)) => sqlx::query_as!(
+                TodoRow,
+                "SELECT id, title, description, done, creation_date, modified_date FROM todos WHERE done = $1",
+                done
+            )
+            .fetch_all(&mut **db)
+            .await
+            .map_err(Errors::SqlxError)?,
+        (None, None) => sqlx::query_as!(TodoRow, "SELECT id, title, description, done, creation_date, modified_date FROM todos")
+            .fetch_all(&mut **db)
+            .await
+            .map_err(Errors::SqlxError)?,
+    };
+
+    let res = filtered
         .into_iter()
-        .cloned()
-        .collect::<Vec<_>>();
-    let filtered = filtered
-        .into_iter()
-        .filter(|todo| {
-            if let Some(done) = done {
-                todo.done == done
-            } else {
-                true
-            }
+        .map(|r| TodoResponse {
+            id: r.id,
+            title: r.title,
+            description: r.description,
+            done: r.done,
         })
         .collect::<Vec<_>>();
 
-    Json(TodoListResponse { items: filtered })
+    Ok(Json(TodoListResponse { items: res }))
 }
 
 #[post("/", format = "json", data = "<todo>")]
