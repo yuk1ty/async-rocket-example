@@ -1,4 +1,4 @@
-use rocket::{get, http::Status, post, response::status::Created, serde::json::Json};
+use rocket::{get, http::Status, post, put, response::status::Created, serde::json::Json};
 use rocket_db_pools::Connection;
 use validator::Validate;
 
@@ -6,6 +6,7 @@ use crate::{
     db::{models::TodoRow, DB},
     errors::Errors,
     models::{CreateOrModifyTodoRequest, TodoListResponse, TodoResponse},
+    Uuid,
 };
 
 #[get("/")]
@@ -89,4 +90,30 @@ pub async fn create_todo(
     })
     .map_err(Errors::SqlxError)?;
     Ok(Created::new("/").body(Json(res)))
+}
+
+#[put("/<id>/done")]
+pub async fn make_todo_done(
+    id: Uuid,
+    mut db: Connection<DB>,
+) -> crate::errors::Result<Json<TodoResponse>> {
+    let res = sqlx::query!(
+        r#"
+        UPDATE todos
+        SET done = true 
+        WHERE id = $1
+        RETURNING id, title, description, done
+        "#,
+        id.0
+    )
+    .fetch_one(&mut **db)
+    .await
+    .map(|r| TodoResponse {
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        done: r.done,
+    })
+    .map_err(Errors::SqlxError)?;
+    Ok(Json(res))
 }

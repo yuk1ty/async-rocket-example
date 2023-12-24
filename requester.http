@@ -1,17 +1,27 @@
-###
-
-GET http://127.0.0.1:8000/todos
-
-###
-
-GET http://127.0.0.1:8000/todos?limit=10&done=false
+@host=127.0.0.1
+@port=8000
 
 ###
 
-POST http://127.0.0.1:8000/todos
+GET http://{{host}}:{{port}}/todos
+
+###
+
+GET http://{{host}}:{{port}}/todos?limit=10&done=false
+
+###
+
+POST http://{{host}}:{{port}}/todos
 Content-Type: application/json
 
 {
   "title": "implement todo list",
   "description": "need to implement todo list app"
 }
+
+###
+
+@id=01d0b36c-964d-40b7-a25d-7acbbedb71d6
+
+PUT http://{{host}}:{{port}}/todos/{{id}}/done
+
