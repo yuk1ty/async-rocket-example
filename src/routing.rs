@@ -1,5 +1,6 @@
 use rocket::{get, http::Status, post, put, response::status::Created, serde::json::Json};
 use rocket_db_pools::Connection;
+use rocket_errors::anyhow;
 use validator::Validate;
 
 use crate::{
@@ -19,7 +20,7 @@ pub async fn todo_list(
     limit: Option<usize>,
     done: Option<bool>,
     mut db: Connection<DB>,
-) -> crate::errors::Result<Json<TodoListResponse>> {
+) -> anyhow::Result<Json<TodoListResponse>> {
     let filtered: Vec<TodoRow> = match (limit, done) {
         (Some(limit), Some(done)) => sqlx::query_as!(
                 TodoRow,
@@ -69,7 +70,7 @@ pub async fn todo_list(
 pub async fn create_todo(
     todo: Json<CreateOrModifyTodoRequest>,
     mut db: Connection<DB>,
-) -> crate::errors::Result<Created<Json<TodoResponse>>> {
+) -> anyhow::Result<Created<Json<TodoResponse>>> {
     todo.validate().map_err(Errors::ValidationError)?;
     let res = sqlx::query!(
         r#"
@@ -96,7 +97,7 @@ pub async fn create_todo(
 pub async fn make_todo_done(
     id: Uuid,
     mut db: Connection<DB>,
-) -> crate::errors::Result<Json<TodoResponse>> {
+) -> anyhow::Result<Json<TodoResponse>> {
     let res = sqlx::query!(
         r#"
         UPDATE todos

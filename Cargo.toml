@@ -11,6 +11,7 @@ uuid = { version = "1.6.1", features = ["serde", "v4"] }
 chrono = "0.4.31"
 rocket = { version = "0.5.0", features = ["json"] }
 rocket_db_pools = { version = "0.1.0", features = ["sqlx_postgres"] }
+rocket-errors = "0.1.0"
 sqlx = { version = "0.7.3", features = [
   "chrono",
   "macros",
